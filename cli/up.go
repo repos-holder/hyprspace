@@ -178,13 +178,20 @@ func UpRun(r *cmd.Root, c *cmd.Sub) {
 	var stream network.Stream
 	var header *ipv4.Header
 	var plen int
+	var dst string
+	ip, _, err := net.ParseCIDR(cfg.Interface.Address)
+	checkErr(err)
 	for {
 		plen, err = iface.Read(packet)
 		checkErr(err)
 		header, _ = ipv4.ParseHeader(packet)
-		_, ok := cfg.Peers[header.Dst.String()]
+		dst = header.Dst.String()
+		if cfg.Interface.Router != "" && header.Src.Equal(ip) {
+			dst = cfg.Interface.Router
+		}
+		_, ok := cfg.Peers[dst]
 		if ok {
-			stream, err = host.NewStream(ctx, peerTable[header.Dst.String()], p2p.Protocol)
+			stream, err = host.NewStream(ctx, peerTable[dst], p2p.Protocol)
 			if err != nil {
 				log.Println(err)
 				continue
